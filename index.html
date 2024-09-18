@@ -192,9 +192,27 @@
         </div>
         <div id="trends" class="tab-content">
             <div class="card">
-                <h2>Symptom Trends</h2>
+                <h2>Fatigue Trend</h2>
                 <div class="chart-container">
-                    <canvas id="symptomChart"></canvas>
+                    <canvas id="fatigueChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Neuropathic Pain Trend</h2>
+                <div class="chart-container">
+                    <canvas id="neuropathicPainChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Dizziness Trend</h2>
+                <div class="chart-container">
+                    <canvas id="dizzinessChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Gait Difficulty Trend</h2>
+                <div class="chart-container">
+                    <canvas id="gaitDifficultyChart"></canvas>
                 </div>
             </div>
         </div>
@@ -222,7 +240,7 @@
     <script>
         let entries = JSON.parse(localStorage.getItem('msSymptomEntries')) || [];
         const symptoms = ['fatigue', 'neuropathic-pain', 'dizziness', 'gait-difficulty'];
-        let chart;
+        let charts = {};
 
         symptoms.forEach(symptom => {
             const slider = document.getElementById(symptom);
@@ -242,7 +260,7 @@
             });
             entries.push(entry);
             localStorage.setItem('msSymptomEntries', JSON.stringify(entries));
-            updateChart();
+            updateCharts();
             updateRecordsTable();
             resetForm();
         }
@@ -254,37 +272,40 @@
             });
         }
 
-        function updateChart() {
-            const ctx = document.getElementById('symptomChart').getContext('2d');
+        function updateCharts() {
             const labels = entries.slice(-7).map(entry => new Date(entry.date).toLocaleDateString());
-            const datasets = symptoms.map(symptom => ({
-                label: symptom.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                data: entries.slice(-7).map(entry => entry.symptoms[symptom]),
-                fill: false,
-                borderColor: getRandomColor(),
-                tension: 0.1
-            }));
+            
+            symptoms.forEach(symptom => {
+                const ctx = document.getElementById(`${symptom.replace('-', '')}Chart`).getContext('2d');
+                const data = entries.slice(-7).map(entry => entry.symptoms[symptom]);
+                
+                if (charts[symptom]) {
+                    charts[symptom].destroy();
+                }
 
-            if (chart) {
-                chart.destroy();
-            }
-
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 10
+                charts[symptom] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: symptom.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                            data: data,
+                            fill: false,
+                            borderColor: getRandomColor(),
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10
+                            }
                         }
                     }
-                }
+                });
             });
         }
 
@@ -341,9 +362,12 @@
             });
             document.getElementById(tabName).classList.add('active');
             document.querySelector(`.tab:nth-child(${['input', 'trends', 'records'].indexOf(tabName) + 1})`).classList.add('active');
+            if (tabName === 'trends') {
+                updateCharts();
+            }
         }
 
-        updateChart();
+        updateCharts();
         updateRecordsTable();
         setReminder();
     </script>
