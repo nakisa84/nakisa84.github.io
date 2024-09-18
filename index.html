@@ -194,16 +194,7 @@
             <div class="card">
                 <h2>Symptom Trends</h2>
                 <div class="chart-container">
-                    <canvas id="fatigueChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="neuropathicPainChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="dizzinessChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="gaitDifficultyChart"></canvas>
+                    <canvas id="symptomChart"></canvas>
                 </div>
             </div>
         </div>
@@ -231,7 +222,7 @@
     <script>
         let entries = JSON.parse(localStorage.getItem('msSymptomEntries')) || [];
         const symptoms = ['fatigue', 'neuropathic-pain', 'dizziness', 'gait-difficulty'];
-        let charts = {};
+        let chart;
 
         symptoms.forEach(symptom => {
             const slider = document.getElementById(symptom);
@@ -251,7 +242,7 @@
             });
             entries.push(entry);
             localStorage.setItem('msSymptomEntries', JSON.stringify(entries));
-            updateCharts();
+            updateChart();
             updateRecordsTable();
             resetForm();
         }
@@ -263,40 +254,37 @@
             });
         }
 
-        function updateCharts() {
+        function updateChart() {
+            const ctx = document.getElementById('symptomChart').getContext('2d');
             const labels = entries.slice(-7).map(entry => new Date(entry.date).toLocaleDateString());
-            
-            symptoms.forEach(symptom => {
-                const ctx = document.getElementById(`${symptom.replace('-', '')}Chart`).getContext('2d');
-                const data = entries.slice(-7).map(entry => entry.symptoms[symptom]);
-                
-                if (charts[symptom]) {
-                    charts[symptom].destroy();
-                }
+            const datasets = symptoms.map(symptom => ({
+                label: symptom.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                data: entries.slice(-7).map(entry => entry.symptoms[symptom]),
+                fill: false,
+                borderColor: getRandomColor(),
+                tension: 0.1
+            }));
 
-                charts[symptom] = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: symptom.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                            data: data,
-                            fill: false,
-                            borderColor: getRandomColor(),
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 10
-                            }
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10
                         }
                     }
-                });
+                }
             });
         }
 
@@ -355,7 +343,7 @@
             document.querySelector(`.tab:nth-child(${['input', 'trends', 'records'].indexOf(tabName) + 1})`).classList.add('active');
         }
 
-        updateCharts();
+        updateChart();
         updateRecordsTable();
         setReminder();
     </script>
