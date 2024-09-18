@@ -72,13 +72,50 @@
             width: 100%;
             margin-bottom: 20px;
         }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        .tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
         @media (prefers-color-scheme: dark) {
             :root {
                 --background-color: #1c1c1e;
                 --text-color: #ffffff;
             }
-            .card {
+            .card, .tab {
                 background-color: #2c2c2e;
+            }
+            th, td {
+                border-color: #444;
             }
         }
     </style>
@@ -86,33 +123,59 @@
 <body>
     <div class="container">
         <h1>MS Symptom Tracker</h1>
-        <div class="card">
-            <div class="symptom">
-                <label for="fatigue">Fatigue (0-10):</label>
-                <input type="range" id="fatigue" min="0" max="10" value="0">
-                <div class="rating-value" id="fatigue-value">0</div>
-            </div>
-            <div class="symptom">
-                <label for="neuropathic-pain">Neuropathic Pain (0-10):</label>
-                <input type="range" id="neuropathic-pain" min="0" max="10" value="0">
-                <div class="rating-value" id="neuropathic-pain-value">0</div>
-            </div>
-            <div class="symptom">
-                <label for="dizziness">Dizziness (0-10):</label>
-                <input type="range" id="dizziness" min="0" max="10" value="0">
-                <div class="rating-value" id="dizziness-value">0</div>
-            </div>
-            <div class="symptom">
-                <label for="gait-difficulty">Gait Difficulty (0-10):</label>
-                <input type="range" id="gait-difficulty" min="0" max="10" value="0">
-                <div class="rating-value" id="gait-difficulty-value">0</div>
-            </div>
-            <button onclick="saveEntry()">Save Entry</button>
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('input')">Input</div>
+            <div class="tab" onclick="showTab('trends')">Trends</div>
+            <div class="tab" onclick="showTab('records')">Records</div>
         </div>
-        <div class="card">
-            <h2>Symptom Trends</h2>
-            <div class="chart-container">
-                <canvas id="symptomChart"></canvas>
+        <div id="input" class="tab-content active">
+            <div class="card">
+                <div class="symptom">
+                    <label for="fatigue">Fatigue (0-10):</label>
+                    <input type="range" id="fatigue" min="0" max="10" value="0">
+                    <div class="rating-value" id="fatigue-value">0</div>
+                </div>
+                <div class="symptom">
+                    <label for="neuropathic-pain">Neuropathic Pain (0-10):</label>
+                    <input type="range" id="neuropathic-pain" min="0" max="10" value="0">
+                    <div class="rating-value" id="neuropathic-pain-value">0</div>
+                </div>
+                <div class="symptom">
+                    <label for="dizziness">Dizziness (0-10):</label>
+                    <input type="range" id="dizziness" min="0" max="10" value="0">
+                    <div class="rating-value" id="dizziness-value">0</div>
+                </div>
+                <div class="symptom">
+                    <label for="gait-difficulty">Gait Difficulty (0-10):</label>
+                    <input type="range" id="gait-difficulty" min="0" max="10" value="0">
+                    <div class="rating-value" id="gait-difficulty-value">0</div>
+                </div>
+                <button onclick="saveEntry()">Save Entry</button>
+            </div>
+        </div>
+        <div id="trends" class="tab-content">
+            <div class="card">
+                <h2>Symptom Trends</h2>
+                <div class="chart-container">
+                    <canvas id="symptomChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div id="records" class="tab-content">
+            <div class="card">
+                <h2>Symptom Records</h2>
+                <table id="recordsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Fatigue</th>
+                            <th>Neuropathic Pain</th>
+                            <th>Dizziness</th>
+                            <th>Gait Difficulty</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -141,6 +204,7 @@
             entries.push(entry);
             localStorage.setItem('msSymptomEntries', JSON.stringify(entries));
             updateChart();
+            updateRecordsTable();
             resetForm();
         }
 
@@ -185,6 +249,22 @@
             });
         }
 
+        function updateRecordsTable() {
+            const tbody = document.querySelector('#recordsTable tbody');
+            tbody.innerHTML = '';
+            entries.slice().reverse().forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(entry.date).toLocaleString()}</td>
+                    <td>${entry.symptoms['fatigue']}</td>
+                    <td>${entry.symptoms['neuropathic-pain']}</td>
+                    <td>${entry.symptoms['dizziness']}</td>
+                    <td>${entry.symptoms['gait-difficulty']}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
         function getRandomColor() {
             const letters = '0123456789ABCDEF';
             let color = '#';
@@ -213,7 +293,19 @@
             }
         }
 
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab:nth-child(${['input', 'trends', 'records'].indexOf(tabName) + 1})`).classList.add('active');
+        }
+
         updateChart();
+        updateRecordsTable();
         setReminder();
     </script>
 </body>
